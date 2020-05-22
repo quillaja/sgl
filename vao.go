@@ -1,8 +1,6 @@
 package sgl
 
 import (
-	"fmt"
-
 	"github.com/go-gl/gl/v3.3-core/gl"
 )
 
@@ -45,14 +43,10 @@ func (v *Vao) makeBuffer(kind uint32, id *uint32) {
 
 func (v *Vao) enableAttribs() {
 	var floatsPerVertex int32
-	// for _, shader := range v.Prog.Shaders {
 	for _, attrib := range v.Prog.Vertex().Attribs {
 		attrib.Enable() // associate this attribute to the vbo
 		floatsPerVertex += attrib.Size
-		fmt.Printf("%+v\n", *attrib)
 	}
-	// }
-	fmt.Println(floatsPerVertex)
 	v.floatsPerVert = floatsPerVertex
 }
 
@@ -70,7 +64,6 @@ func (v *Vao) CountVerts() int32 {
 
 func (v *Vao) SetVbo(sizeInBytes int, data []float32, usage uint32) {
 	v.vboVertCount = int32(len(data)) / v.floatsPerVert
-	fmt.Printf("verts (vbo) %d\n", v.vboVertCount)
 	gl.BindBuffer(gl.ARRAY_BUFFER, v.Vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, sizeInBytes, gl.Ptr(data), usage)
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0) // unbind
@@ -78,7 +71,6 @@ func (v *Vao) SetVbo(sizeInBytes int, data []float32, usage uint32) {
 
 func (v *Vao) SetEbo(sizeInBytes int, data []uint32, usage uint32) {
 	v.eboVertCount = int32(len(data))
-	fmt.Printf("verts (ebo) %d\n", v.eboVertCount)
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, v.Ebo)
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, sizeInBytes, gl.Ptr(data), usage)
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0) // unbind
