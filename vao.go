@@ -5,11 +5,11 @@ import (
 )
 
 type Vao struct {
-	VaoID         uint32   // id for vao
-	Vbo           uint32   // id for vertex buffer object associated with this vao
-	Ebo           uint32   // id for element (vertex index) buffer associated with this vao
-	Tex           []uint32 // ids for all textures to be used with this vao (on draw)
-	Prog          *Program // program to load when drawing
+	VaoID         uint32       // id for vao
+	Vbo           uint32       // id for vertex buffer object associated with this vao
+	Ebo           uint32       // id for element (vertex index) buffer associated with this vao
+	Tex           []*Texture2D // ids for all textures to be used with this vao (on draw)
+	Prog          *Program     // program to load when drawing
 	floatsPerVert int32
 	vboVertCount  int32
 	eboVertCount  int32
@@ -18,7 +18,7 @@ type Vao struct {
 func NewVao(program *Program) *Vao {
 	v := &Vao{
 		Prog: program,
-		Tex:  make([]uint32, 0),
+		Tex:  make([]*Texture2D, 0),
 	}
 
 	gl.GenVertexArrays(1, &v.VaoID)
@@ -80,8 +80,8 @@ func (v *Vao) SetEbo(sizeInBytes int, data []uint32, usage uint32) {
 // texture, and also associates the texture with the texture
 // "number" of the texture's index in the Tex slice.
 // eg. TEXTURE0 is at Tex[0], TEXTURE1 at Tex[1], etc.
-func (v *Vao) SetTexture(uniformName string, texID uint32) {
-	v.Tex = append(v.Tex, texID)
+func (v *Vao) SetTexture(uniformName string, texture *Texture2D) {
+	v.Tex = append(v.Tex, texture)
 	texNumber := int32(len(v.Tex) - 1)
 	v.Prog.Fragment().SetInt(uniformName, 1, &texNumber)
 }
@@ -92,7 +92,7 @@ func (v *Vao) Draw(mode uint32, first, count int32) {
 	// load texture uniforms in fragment shader
 	for i, tex := range v.Tex {
 		gl.ActiveTexture(gl.TEXTURE0 + uint32(i))
-		gl.BindTexture(gl.TEXTURE_2D, tex)
+		gl.BindTexture(gl.TEXTURE_2D, tex.ID)
 		// purposefully not unbinding textures at end
 	}
 

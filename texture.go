@@ -61,3 +61,12 @@ func NewTextureRGBA(rgba *image.RGBA) (*Texture2D, error) {
 
 	return texture, nil
 }
+
+func (tex *Texture2D) Reload(img *image.RGBA) {
+	gl.BindTexture(gl.TEXTURE_2D, tex.ID)
+	gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0,
+		tex.Width,
+		tex.Height,
+		gl.RGBA, gl.UNSIGNED_BYTE,
+		gl.Ptr(img.Pix))
+}
