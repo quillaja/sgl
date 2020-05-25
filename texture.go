@@ -62,6 +62,10 @@ func NewTextureRGBA(rgba *image.RGBA) (*Texture2D, error) {
 	return texture, nil
 }
 
+func (tex *Texture2D) Delete() {
+	gl.DeleteTextures(1, &tex.ID)
+}
+
 func (tex *Texture2D) Reload(img *image.RGBA) {
 	gl.BindTexture(gl.TEXTURE_2D, tex.ID)
 	gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0,
