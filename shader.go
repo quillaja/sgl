@@ -57,6 +57,14 @@ func (a *Attribute) Enable() {
 
 // func (a *Attribute) String() string { return fmt.Sprintf("%+v", *a) }
 
+// Aliases for common shader types to avoid slow autocomplete of gl pkg.
+const (
+	VertexShader   = gl.VERTEX_SHADER
+	FragmentShader = gl.FRAGMENT_SHADER
+	GeometryShader = gl.GEOMETRY_SHADER
+	ComputeShader  = gl.COMPUTE_SHADER
+)
+
 type Shader struct {
 	ID       uint32
 	Type     uint32 // gl.VERTEX_SHADER, gl.FRAGMENT_SHADER, etc
@@ -135,6 +143,7 @@ func (prog *Program) Delete() {
 	gl.DeleteProgram(prog.ID)
 }
 
+// AddShader creates and associates a shader with this program.
 func (prog *Program) AddShader(shaderType uint32, source string, uniformNames []string, attribs ...Attribute) {
 	a := make(map[string]*Attribute, len(attribs))
 	for i := range attribs {
@@ -194,14 +203,15 @@ func (prog *Program) Link() error {
 	return nil
 }
 
+// Build will compile and link a program.
 func (prog *Program) Build() error {
 	err := prog.Compile()
 	if err != nil {
-		return err
+		return fmt.Errorf("compile error: %w", err)
 	}
 	err = prog.Link()
 	if err != nil {
-		return err
+		return fmt.Errorf("link error: %w", err)
 	}
 	return nil
 }
@@ -224,7 +234,7 @@ func (prog *Program) checkLinkStatus() error {
 func compileShader(source string, shaderType uint32) (uint32, error) {
 	shader := gl.CreateShader(shaderType)
 
-	csources, free := gl.Strs(source)
+	csources, free := gl.Strs(source + "\x00") // gl.Strs() lies about null termination
 	defer free()
 	gl.ShaderSource(shader, 1, csources, nil)
 	gl.CompileShader(shader)
