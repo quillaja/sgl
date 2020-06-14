@@ -42,6 +42,8 @@ func NewTextureRGBA(rgba *image.RGBA) (*Texture2D, error) {
 	gl.GenTextures(1, &texture.ID)
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, texture.ID)
+	// TODO: update to sampler object?
+	// https://stackoverflow.com/questions/30759028/changing-texture-parameters-at-runtime
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)

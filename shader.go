@@ -136,7 +136,6 @@ func (prog *Program) Delete() {
 }
 
 func (prog *Program) AddShader(shaderType uint32, source string, uniformNames []string, attribs ...Attribute) {
-	// a := make([]*Attribute, len(attribs))
 	a := make(map[string]*Attribute, len(attribs))
 	for i := range attribs {
 		a[attribs[i].Name] = &attribs[i]
@@ -226,8 +225,8 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 	shader := gl.CreateShader(shaderType)
 
 	csources, free := gl.Strs(source)
+	defer free()
 	gl.ShaderSource(shader, 1, csources, nil)
-	free()
 	gl.CompileShader(shader)
 
 	// this just checks compilation status
