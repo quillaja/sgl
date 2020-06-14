@@ -13,6 +13,8 @@ import (
 // GLFW implements a platform based on github.com/go-gl/glfw (v3.3).
 type GLFW struct {
 	IO       imgui.IO
+	imguiCtx *imgui.Context
+
 	Renderer *OpenGL3
 	Window   *glfw.Window
 
@@ -22,36 +24,61 @@ type GLFW struct {
 	mouseJustPressed [3]bool
 }
 
+// WindowMetric contains info on the window position (X, Y),
+// size (W, H), and windowed/fullscreen status.
 type WindowMetric struct {
 	X, Y       int
 	W, H       int
 	Fullscreen bool
 }
 
-// NewGLFW attempts to initialize a GLFW context.
-func NewGLFW(io imgui.IO, makeWindow func() (*glfw.Window, error)) (*GLFW, error) {
+// NewGLFW attempts to initialize a GLFW context/window/imgui etc.
+func NewGLFW(title string, size WindowMetric, font *imgui.FontAtlas) (*GLFW, error) {
 	runtime.LockOSThread()
+	var platform *GLFW
 
 	err := glfw.Init()
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize glfw: %v", err)
+		return nil, fmt.Errorf("failed to initialize glfw: %w", err)
 	}
 
-	window, err := makeWindow()
+	// i always just use these, so just set them here to simplify window creation
+	glfw.WindowHint(glfw.Resizable, glfw.False)
+	glfw.WindowHint(glfw.Visible, glfw.False)
+	glfw.WindowHint(glfw.ContextVersionMajor, 3)
+	glfw.WindowHint(glfw.ContextVersionMinor, 3)
+	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	window, err := glfw.CreateWindow(size.W, size.H, title, nil, nil)
 	if err != nil {
 		glfw.Terminate()
-		return nil, fmt.Errorf("failed to create window: %v", err)
+		return nil, fmt.Errorf("failed to create window: %w", err)
 	}
 	window.MakeContextCurrent()
 	glfw.SwapInterval(1)
+
+	window.SetPos(size.X, size.Y)
+	defer func() {
+		if window != nil {
+			if size.Fullscreen {
+				platform.Fullscreen(true, 0, 0)
+			}
+			window.Show()
+		}
+	}()
+
+	// imgui initialization things
+	imgctx := imgui.CreateContext(font)
+	io := imgui.CurrentIO()
 
 	glrenderer, err := NewOpenGL3(io)
 	if err != nil {
 		panic(err)
 	}
 
-	platform := &GLFW{
+	platform = &GLFW{
 		IO:       io,
+		imguiCtx: imgctx,
 		Window:   window,
 		Renderer: glrenderer,
 	}
@@ -61,26 +88,13 @@ func NewGLFW(io imgui.IO, makeWindow func() (*glfw.Window, error)) (*GLFW, error
 	// save initial window position and size
 	platform.WinDims.X, platform.WinDims.Y = platform.Window.GetPos()
 	platform.WinDims.W, platform.WinDims.H = platform.Window.GetSize()
-	// TODO: move to 'installCallbacks'
-	window.SetPosCallback(func(w *glfw.Window, xpos, ypos int) {
-		// save position only if in windowed mode
-		if !platform.WinDims.Fullscreen {
-			platform.WinDims.X, platform.WinDims.Y = xpos, ypos
-		}
-	})
-	window.SetSizeCallback(func(w *glfw.Window, width, height int) {
-		// save size only if in windowed mode
-		if !platform.WinDims.Fullscreen {
-			platform.WinDims.W, platform.WinDims.H = width, height
-		}
-	})
-	window.SetFramebufferSizeCallback(func(w *glfw.Window, width, height int) {
-		gl.Viewport(0, 0, int32(width), int32(height))
-	})
 
 	return platform, nil
 }
 
+// Fullscreen toggles windowed and fullscreen modes. Parameters width and height
+// will set screen resolution only for fullscreen mode, and values of 0 will
+// use the current resolution.
 func (platform *GLFW) Fullscreen(full bool, width, height int) (setWidth, setHeight int) {
 	if full {
 		m := glfw.GetPrimaryMonitor()
@@ -106,6 +120,7 @@ func (platform *GLFW) Dispose() {
 	platform.Window.Destroy()
 	glfw.Terminate()
 	platform.Renderer.Dispose()
+	platform.imguiCtx.Destroy()
 }
 
 // ShouldClose returns true if the window is to be closed.
@@ -116,6 +131,37 @@ func (platform *GLFW) ShouldClose() bool {
 // PollEvents handles all pending window events.
 func (platform *GLFW) PollEvents() {
 	glfw.PollEvents()
+}
+
+// SwapBuffers performs a buffer swap.
+func (platform *GLFW) SwapBuffers() {
+	platform.Window.SwapBuffers()
+}
+
+// ClearBuffers clears color buffer and optionally depth buffer.
+func (platform *GLFW) ClearBuffers(depthBuffer bool) {
+	if depthBuffer {
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+		return
+	}
+	gl.Clear(gl.COLOR_BUFFER_BIT)
+}
+
+// RenderImgui will perform the beginning and ending steps of rendering
+// the imgui constructed by calls to the imgui pkg in the 'gui' function.
+func (platform *GLFW) RenderImgui(gui func()) {
+	// start 'frame'
+	platform.NewFrame()
+	imgui.NewFrame()
+
+	gui()
+
+	// end 'frame'
+	imgui.Render()
+
+	// render gui
+	drawdata := imgui.RenderedDrawData()
+	platform.Renderer.Render(platform.DisplaySize(), platform.FramebufferSize(), drawdata)
 }
 
 // Aspect returns aspect ratio.
@@ -144,9 +190,7 @@ func (platform *GLFW) NewFrame() {
 
 	// Setup time step
 	currentTime := glfw.GetTime()
-	// if platform.time > 0 {
 	platform.IO.SetDeltaTime(float32(currentTime - platform.time))
-	// }
 	platform.time = currentTime
 
 	// Setup inputs
@@ -164,9 +208,14 @@ func (platform *GLFW) NewFrame() {
 	}
 }
 
-// SwapBuffers performs a buffer swap.
-func (platform *GLFW) SwapBuffers() {
-	platform.Window.SwapBuffers()
+// CapturesKeyboard returns true if Imgui is capturing keyboard input.
+func (platform *GLFW) CapturesKeyboard() bool {
+	return platform.IO.WantCaptureKeyboard()
+}
+
+// CapturesMouse returns true if Imgui is capturing mouse input.
+func (platform *GLFW) CapturesMouse() bool {
+	return platform.IO.WantCaptureMouse()
 }
 
 func (platform *GLFW) setKeyMapping() {
@@ -199,6 +248,23 @@ func (platform *GLFW) installCallbacks() {
 	platform.Window.SetScrollCallback(platform.mouseScrollChange)
 	platform.Window.SetKeyCallback(platform.keyChange)
 	platform.Window.SetCharCallback(platform.charChange)
+
+	// set various window/frame size callbacks
+	platform.Window.SetPosCallback(func(w *glfw.Window, xpos, ypos int) {
+		// save position only if in windowed mode
+		if !platform.WinDims.Fullscreen {
+			platform.WinDims.X, platform.WinDims.Y = xpos, ypos
+		}
+	})
+	platform.Window.SetSizeCallback(func(w *glfw.Window, width, height int) {
+		// save size only if in windowed mode
+		if !platform.WinDims.Fullscreen {
+			platform.WinDims.W, platform.WinDims.H = width, height
+		}
+	})
+	platform.Window.SetFramebufferSizeCallback(func(w *glfw.Window, width, height int) {
+		gl.Viewport(0, 0, int32(width), int32(height))
+	})
 }
 
 var glfwButtonIndexByID = map[glfw.MouseButton]int{
