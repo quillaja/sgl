@@ -8,5 +8,12 @@ can use go port of imgui for gui.
     - [ ] 3d shapes with vertex colors, normals, textures, point/directional lights
 - [ ] More opengl features.
 - [ ] Improve text/font rendering in `font.go`.
-- [ ] rename some types and functions.
+- [x] rename some types and functions.
 - [ ] add utilites (from my gaia stars program)
+
+## Changelog
+
+- Next
+    - screen capture to `image.Image`
+    - renamed main data structure.
+    - different api for window/platform creation.
