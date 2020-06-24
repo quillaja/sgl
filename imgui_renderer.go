@@ -1,8 +1,6 @@
 package sgl
 
 import (
-	"fmt"
-
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/inkyblackness/imgui-go/v2"
 )
@@ -28,10 +26,7 @@ type openGL3 struct {
 // newOpenGL3 attempts to initialize a renderer.
 // An OpenGL context has to be established before calling this function.
 func newOpenGL3(io imgui.IO) (*openGL3, error) {
-	err := gl.Init()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize OpenGL: %w", err)
-	}
+	// assumes  gl.Init() has been called
 
 	renderer := &openGL3{
 		imguiIO:     io,

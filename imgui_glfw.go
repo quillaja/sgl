@@ -85,6 +85,11 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	window.MakeContextCurrent()
 	glfw.SwapInterval(1)
 
+	err = gl.Init() // must be called after glfw & MakeContextCurrent and before other gl functions
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize OpenGL: %w", err)
+	}
+
 	window.SetPos(size.X, size.Y)
 	defer func() {
 		if window != nil {
