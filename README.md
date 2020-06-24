@@ -10,10 +10,12 @@ can use go port of imgui for gui.
 - [ ] Improve text/font rendering in `font.go`.
 - [x] rename some types and functions.
 - [ ] add utilites (from my gaia stars program)
+- [ ] make `Texture2D` more flexible
 
 ## Changelog
 
 - Next
     - screen capture to `image.Image`
+    - added simple framebuffer object.
     - renamed main data structure.
     - different api for window/platform creation.
