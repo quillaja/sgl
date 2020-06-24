@@ -66,8 +66,8 @@ type WindowMetric struct {
 // WindowOption sets a option during window creation.
 type WindowOption func(*Window) error
 
-// NewGLFW attempts to initialize a GLFW context/window/imgui etc.
-func NewGLFW(title string, size WindowMetric, options ...WindowOption) (*Window, error) {
+// NewWindow attempts to initialize a GLFW context/window/imgui etc.
+func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Window, error) {
 	var platform *Window
 
 	// i always just use these, so just set them here to simplify window creation
@@ -102,6 +102,8 @@ func NewGLFW(title string, size WindowMetric, options ...WindowOption) (*Window,
 	// save initial window position and size
 	platform.Dimensions.X, platform.Dimensions.Y = platform.GlfwWindow.GetPos()
 	platform.Dimensions.W, platform.Dimensions.H = platform.GlfwWindow.GetSize()
+
+	platform.installWindowDimensionsCallbacks()
 
 	for _, option := range options {
 		option(platform)
@@ -253,8 +255,8 @@ func (platform *Window) ScreenCapture() image.Image {
 	return rgba
 }
 
-// windowDimensionsCallbacks set various window/frame size callbacks
-func (platform *Window) windowDimensionsCallbacks() {
+// installWindowDimensionsCallbacks set various window/frame size callbacks
+func (platform *Window) installWindowDimensionsCallbacks() {
 	platform.GlfwWindow.SetPosCallback(func(w *glfw.Window, xpos, ypos int) {
 		// save position only if in windowed mode
 		if !platform.Dimensions.Fullscreen {
