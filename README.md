@@ -9,7 +9,7 @@ can use go port of imgui for gui.
 - [ ] More opengl features.
 - [ ] Improve text/font rendering in `font.go`.
 - [x] rename some types and functions.
-- [ ] add utilites (from my gaia stars program)
+- [x] add utilites (from my gaia stars program)
 - [ ] make `Texture2D` more flexible
 
 ## Changelog
@@ -17,6 +17,7 @@ can use go port of imgui for gui.
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui
     - package level function to set "default" (for me) opengl settings
+    - a few useful utility types (Timer, Cycler, AnimationMap...)
 - 0.2.0
     - screen capture to `image.Image`
     - added simple framebuffer object.
