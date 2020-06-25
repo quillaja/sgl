@@ -27,9 +27,11 @@ func Destroy() {
 	glfw.Terminate()
 }
 
-// Window implements a platform based on github.com/go-gl/glfw (v3.3).
+// Window implements a window, opengl contenxt based on github.com/go-gl/glfw (v3.3),
+// and (optionally) imgui context. It also has additional helpful features.
 type Window struct {
-	gui *imguiData
+	// Allows direct access to some of the imgui data.
+	Gui *imguiData
 
 	// Allows direct access to the glfw window.
 	GlfwWindow *glfw.Window
@@ -41,13 +43,33 @@ type Window struct {
 	mouseJustPressed [3]bool
 }
 
+// FontMap associates a friendly name (key) with info about a font loaded
+// for use with imgui. The Filename and Size fields are used during
+// initializtion of imgui.
+type FontMap map[string]struct {
+	Filename string
+	Size     float32
+	Font     imgui.Font
+}
+
 // a convenient struct to hold data related to imgui.
 type imguiData struct {
 	IO       imgui.IO
 	imguiCtx *imgui.Context
 	renderer *openGL3
+	Fonts    FontMap
 }
 
+// Font returns a font from the FontMap with the given name key.
+// Returns the imgui default font if not found.
+func (gui *imguiData) Font(name string) imgui.Font {
+	if font, ok := gui.Fonts[name]; ok {
+		return font.Font
+	}
+	return imgui.DefaultFont
+}
+
+// Destroy releases resources.
 func (gui *imguiData) Destroy() {
 	gui.renderer.Dispose()
 	gui.imguiCtx.Destroy()
@@ -110,33 +132,51 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 
 	platform.installWindowDimensionsCallbacks()
 
-	for _, option := range options {
-		option(platform)
+	for i, option := range options {
+		optErr := option(platform)
+		if optErr != nil {
+			return nil, fmt.Errorf("option %d had an error: %w", i, optErr)
+		}
 	}
 
 	return platform, nil
 }
 
 // UseImgui is an option to setup additional bits so the window can be used
-// with Imgui to create a user interface.
-func UseImgui(font *imgui.FontAtlas) WindowOption {
+// with Imgui to create a user interface. Provide a key (for later reference)
+// and the `Filename` and `Size` fields to load fonts for use with imgui.
+// Pass nil to just use the default font.
+func UseImgui(fonts FontMap) WindowOption {
 	return func(platform *Window) error {
 		// imgui initialization things
-		imgctx := imgui.CreateContext(font)
+		imgctx := imgui.CreateContext(nil)
 		io := imgui.CurrentIO()
 
+		// add fonts
+		// default font would be added if the fontmap was empty, but this lets
+		// imgui.DefaultFont reference the built-in font rather than the "first"
+		// font added via the fontmap.
+		io.Fonts().AddFontDefault()
+		for name, font := range fonts {
+			font.Font = io.Fonts().AddFontFromFileTTF(font.Filename, font.Size)
+			fonts[name] = font
+		}
+
+		// the renderer creates a texture font atlas so fonts have
+		// to be added to the "io" before this call.
 		glrenderer, err := newOpenGL3(io)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("couldn't create imgui's opengl renderer: %w", err)
 		}
 
 		gui := imguiData{
 			IO:       io,
 			imguiCtx: imgctx,
 			renderer: glrenderer,
+			Fonts:    fonts,
 		}
 
-		platform.gui = &gui
+		platform.Gui = &gui
 		platform.setImguiKeyMapping()
 		platform.installImguiCallbacks()
 
@@ -176,8 +216,8 @@ func (platform *Window) Fullscreen(full bool, width, height int) (setWidth, setH
 // Dispose cleans up the resources.
 func (platform *Window) Dispose() {
 	platform.GlfwWindow.Destroy()
-	if platform.gui != nil {
-		platform.gui.Destroy()
+	if platform.Gui != nil {
+		platform.Gui.Destroy()
 	}
 }
 
@@ -196,13 +236,9 @@ func (platform *Window) SwapBuffers() {
 	platform.GlfwWindow.SwapBuffers()
 }
 
-// ClearBuffers clears color buffer and optionally depth buffer.
-func (platform *Window) ClearBuffers(depthBuffer bool) {
-	if depthBuffer {
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-		return
-	}
-	gl.Clear(gl.COLOR_BUFFER_BIT)
+// ClearBuffers clears color buffer and depth buffer.
+func (platform *Window) ClearBuffers() {
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
 // RenderImgui will perform the beginning and ending steps of rendering
@@ -219,7 +255,7 @@ func (platform *Window) RenderImgui(gui func()) {
 
 	// render gui
 	drawdata := imgui.RenderedDrawData()
-	platform.gui.renderer.Render(platform.DisplaySize(), platform.FramebufferSize(), drawdata)
+	platform.Gui.renderer.Render(platform.DisplaySize(), platform.FramebufferSize(), drawdata)
 }
 
 // Aspect returns aspect ratio.
@@ -260,6 +296,16 @@ func (platform *Window) ScreenCapture() image.Image {
 	return rgba
 }
 
+// ClipboardText returns the current clipboard text, if available.
+func (platform *Window) ClipboardText() string {
+	return platform.GlfwWindow.GetClipboardString()
+}
+
+// SetClipboardText sets the text as the current clipboard text.
+func (platform *Window) SetClipboardText(text string) {
+	platform.GlfwWindow.SetClipboardString(text)
+}
+
 // installWindowDimensionsCallbacks set various window/frame size callbacks
 func (platform *Window) installWindowDimensionsCallbacks() {
 	platform.GlfwWindow.SetPosCallback(func(w *glfw.Window, xpos, ypos int) {
@@ -279,65 +325,69 @@ func (platform *Window) installWindowDimensionsCallbacks() {
 	})
 }
 
+///////////////////////////////
+// imgui hooks and things
+///////////////////////////////
+
+// CapturesKeyboard returns true if Imgui is capturing keyboard input.
+func (platform *Window) CapturesKeyboard() bool {
+	return platform.Gui != nil && platform.Gui.IO.WantCaptureKeyboard()
+}
+
+// CapturesMouse returns true if Imgui is capturing mouse input.
+func (platform *Window) CapturesMouse() bool {
+	return platform.Gui != nil && platform.Gui.IO.WantCaptureMouse()
+}
+
 // forwardStateToImgui marks the begin of a render pass. It forwards all current state to imgui IO.
 func (platform *Window) forwardStateToImgui() {
 	// Setup display size (every frame to accommodate for window resizing)
 	displaySize := platform.DisplaySize()
-	platform.gui.IO.SetDisplaySize(imgui.Vec2{X: displaySize[0], Y: displaySize[1]})
+	platform.Gui.IO.SetDisplaySize(imgui.Vec2{X: displaySize[0], Y: displaySize[1]})
 
 	// Setup time step
 	currentTime := glfw.GetTime()
-	platform.gui.IO.SetDeltaTime(float32(currentTime - platform.time))
+	platform.Gui.IO.SetDeltaTime(float32(currentTime - platform.time))
 	platform.time = currentTime
 
 	// Setup inputs
 	if platform.GlfwWindow.GetAttrib(glfw.Focused) != 0 {
 		x, y := platform.GlfwWindow.GetCursorPos()
-		platform.gui.IO.SetMousePosition(imgui.Vec2{X: float32(x), Y: float32(y)})
+		platform.Gui.IO.SetMousePosition(imgui.Vec2{X: float32(x), Y: float32(y)})
 	} else {
-		platform.gui.IO.SetMousePosition(imgui.Vec2{X: -math.MaxFloat32, Y: -math.MaxFloat32})
+		platform.Gui.IO.SetMousePosition(imgui.Vec2{X: -math.MaxFloat32, Y: -math.MaxFloat32})
 	}
 
 	for i := 0; i < len(platform.mouseJustPressed); i++ {
 		down := platform.mouseJustPressed[i] || (platform.GlfwWindow.GetMouseButton(glfwButtonIDByIndex[i]) == glfw.Press)
-		platform.gui.IO.SetMouseButtonDown(i, down)
+		platform.Gui.IO.SetMouseButtonDown(i, down)
 		platform.mouseJustPressed[i] = false
 	}
 }
 
-// CapturesKeyboard returns true if Imgui is capturing keyboard input.
-func (platform *Window) CapturesKeyboard() bool {
-	return platform.gui.IO.WantCaptureKeyboard()
-}
-
-// CapturesMouse returns true if Imgui is capturing mouse input.
-func (platform *Window) CapturesMouse() bool {
-	return platform.gui.IO.WantCaptureMouse()
-}
-
 func (platform *Window) setImguiKeyMapping() {
 	// Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
-	platform.gui.IO.KeyMap(imgui.KeyTab, int(glfw.KeyTab))
-	platform.gui.IO.KeyMap(imgui.KeyLeftArrow, int(glfw.KeyLeft))
-	platform.gui.IO.KeyMap(imgui.KeyRightArrow, int(glfw.KeyRight))
-	platform.gui.IO.KeyMap(imgui.KeyUpArrow, int(glfw.KeyUp))
-	platform.gui.IO.KeyMap(imgui.KeyDownArrow, int(glfw.KeyDown))
-	platform.gui.IO.KeyMap(imgui.KeyPageUp, int(glfw.KeyPageUp))
-	platform.gui.IO.KeyMap(imgui.KeyPageDown, int(glfw.KeyPageDown))
-	platform.gui.IO.KeyMap(imgui.KeyHome, int(glfw.KeyHome))
-	platform.gui.IO.KeyMap(imgui.KeyEnd, int(glfw.KeyEnd))
-	platform.gui.IO.KeyMap(imgui.KeyInsert, int(glfw.KeyInsert))
-	platform.gui.IO.KeyMap(imgui.KeyDelete, int(glfw.KeyDelete))
-	platform.gui.IO.KeyMap(imgui.KeyBackspace, int(glfw.KeyBackspace))
-	platform.gui.IO.KeyMap(imgui.KeySpace, int(glfw.KeySpace))
-	platform.gui.IO.KeyMap(imgui.KeyEnter, int(glfw.KeyEnter))
-	platform.gui.IO.KeyMap(imgui.KeyEscape, int(glfw.KeyEscape))
-	platform.gui.IO.KeyMap(imgui.KeyA, int(glfw.KeyA))
-	platform.gui.IO.KeyMap(imgui.KeyC, int(glfw.KeyC))
-	platform.gui.IO.KeyMap(imgui.KeyV, int(glfw.KeyV))
-	platform.gui.IO.KeyMap(imgui.KeyX, int(glfw.KeyX))
-	platform.gui.IO.KeyMap(imgui.KeyY, int(glfw.KeyY))
-	platform.gui.IO.KeyMap(imgui.KeyZ, int(glfw.KeyZ))
+	platform.Gui.IO.KeyMap(imgui.KeyTab, int(glfw.KeyTab))
+	platform.Gui.IO.KeyMap(imgui.KeyLeftArrow, int(glfw.KeyLeft))
+	platform.Gui.IO.KeyMap(imgui.KeyRightArrow, int(glfw.KeyRight))
+	platform.Gui.IO.KeyMap(imgui.KeyUpArrow, int(glfw.KeyUp))
+	platform.Gui.IO.KeyMap(imgui.KeyDownArrow, int(glfw.KeyDown))
+	platform.Gui.IO.KeyMap(imgui.KeyPageUp, int(glfw.KeyPageUp))
+	platform.Gui.IO.KeyMap(imgui.KeyPageDown, int(glfw.KeyPageDown))
+	platform.Gui.IO.KeyMap(imgui.KeyHome, int(glfw.KeyHome))
+	platform.Gui.IO.KeyMap(imgui.KeyEnd, int(glfw.KeyEnd))
+	platform.Gui.IO.KeyMap(imgui.KeyInsert, int(glfw.KeyInsert))
+	platform.Gui.IO.KeyMap(imgui.KeyDelete, int(glfw.KeyDelete))
+	platform.Gui.IO.KeyMap(imgui.KeyBackspace, int(glfw.KeyBackspace))
+	platform.Gui.IO.KeyMap(imgui.KeySpace, int(glfw.KeySpace))
+	platform.Gui.IO.KeyMap(imgui.KeyEnter, int(glfw.KeyEnter))
+	platform.Gui.IO.KeyMap(imgui.KeyEscape, int(glfw.KeyEscape))
+	platform.Gui.IO.KeyMap(imgui.KeyA, int(glfw.KeyA))
+	platform.Gui.IO.KeyMap(imgui.KeyC, int(glfw.KeyC))
+	platform.Gui.IO.KeyMap(imgui.KeyV, int(glfw.KeyV))
+	platform.Gui.IO.KeyMap(imgui.KeyX, int(glfw.KeyX))
+	platform.Gui.IO.KeyMap(imgui.KeyY, int(glfw.KeyY))
+	platform.Gui.IO.KeyMap(imgui.KeyZ, int(glfw.KeyZ))
 }
 
 func (platform *Window) installImguiCallbacks() {
@@ -368,34 +418,24 @@ func (platform *Window) mouseButtonChange(window *glfw.Window, rawButton glfw.Mo
 }
 
 func (platform *Window) mouseScrollChange(window *glfw.Window, x, y float64) {
-	platform.gui.IO.AddMouseWheelDelta(float32(x), float32(y))
+	platform.Gui.IO.AddMouseWheelDelta(float32(x), float32(y))
 }
 
 func (platform *Window) keyChange(window *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 	if action == glfw.Press {
-		platform.gui.IO.KeyPress(int(key))
+		platform.Gui.IO.KeyPress(int(key))
 	}
 	if action == glfw.Release {
-		platform.gui.IO.KeyRelease(int(key))
+		platform.Gui.IO.KeyRelease(int(key))
 	}
 
 	// Modifiers are not reliable across systems
-	platform.gui.IO.KeyCtrl(int(glfw.KeyLeftControl), int(glfw.KeyRightControl))
-	platform.gui.IO.KeyShift(int(glfw.KeyLeftShift), int(glfw.KeyRightShift))
-	platform.gui.IO.KeyAlt(int(glfw.KeyLeftAlt), int(glfw.KeyRightAlt))
-	platform.gui.IO.KeySuper(int(glfw.KeyLeftSuper), int(glfw.KeyRightSuper))
+	platform.Gui.IO.KeyCtrl(int(glfw.KeyLeftControl), int(glfw.KeyRightControl))
+	platform.Gui.IO.KeyShift(int(glfw.KeyLeftShift), int(glfw.KeyRightShift))
+	platform.Gui.IO.KeyAlt(int(glfw.KeyLeftAlt), int(glfw.KeyRightAlt))
+	platform.Gui.IO.KeySuper(int(glfw.KeyLeftSuper), int(glfw.KeyRightSuper))
 }
 
 func (platform *Window) charChange(window *glfw.Window, char rune) {
-	platform.gui.IO.AddInputCharacters(string(char))
-}
-
-// ClipboardText returns the current clipboard text, if available.
-func (platform *Window) ClipboardText() string {
-	return platform.GlfwWindow.GetClipboardString()
-}
-
-// SetClipboardText sets the text as the current clipboard text.
-func (platform *Window) SetClipboardText(text string) {
-	platform.GlfwWindow.SetClipboardString(text)
+	platform.Gui.IO.AddInputCharacters(string(char))
 }
