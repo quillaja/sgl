@@ -27,6 +27,14 @@ func Destroy() {
 	glfw.Terminate()
 }
 
+// SetGLDefaults sets a few opengl options that I commonly use.
+func SetGLDefaults() {
+	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+}
+
 // Window implements a window, opengl contenxt based on github.com/go-gl/glfw (v3.3),
 // and (optionally) imgui context. It also has additional helpful features.
 type Window struct {
@@ -145,12 +153,14 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 // UseImgui is an option to setup additional bits so the window can be used
 // with Imgui to create a user interface. Provide a key (for later reference)
 // and the `Filename` and `Size` fields to load fonts for use with imgui.
-// Pass nil to just use the default font.
+// Pass nil to just use the default font. Imgui ini file disabled by default.
 func UseImgui(fonts FontMap) WindowOption {
 	return func(platform *Window) error {
 		// imgui initialization things
 		imgctx := imgui.CreateContext(nil)
 		io := imgui.CurrentIO()
+
+		io.SetIniFilename("") // default to no ini file. can be set later to enable one.
 
 		// add fonts
 		// default font would be added if the fontmap was empty, but this lets

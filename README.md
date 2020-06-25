@@ -13,8 +13,11 @@ can use go port of imgui for gui.
 - [ ] make `Texture2D` more flexible
 
 ## Changelog
-
-- Next
+- 0.3.0
+    - changed/"fixed" imgui renderer to display images in color
+    - modified window creation api to allow for fonts with imgui
+    - package level function to set "default" (for me) opengl settings
+- 0.2.0
     - screen capture to `image.Image`
     - added simple framebuffer object.
     - renamed main data structure.
