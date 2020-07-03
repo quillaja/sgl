@@ -8,13 +8,22 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
+// only need this once in the package
 var skyboxProgram *Program
 
+// Skybox is a complete cubemap skybox.
 type Skybox struct {
 	TextureID uint32
 	Vao       *Vao
 }
 
+// NewSkybox creates a skybox. It expects faces in this order:
+//     +X (right)
+//     -X (left)
+//     +Y (top)
+//     -Y (bottom)
+//     +Z (front)
+//     -Z (back)
 func NewSkybox(faces []*image.RGBA) (*Skybox, error) {
 	if skyboxProgram == nil {
 		skyboxProgram = NewProgram()
@@ -39,11 +48,13 @@ func NewSkybox(faces []*image.RGBA) (*Skybox, error) {
 	return sky, nil
 }
 
+// Delete resources.
 func (sky *Skybox) Delete() {
 	sky.Vao.Delete()
 	gl.DeleteTextures(1, &sky.TextureID)
 }
 
+// Draw should be called after other objects.
 func (sky *Skybox) Draw(view, projection mgl32.Mat4) {
 	view = view.Mat3().Mat4() // remove translation from the view matrix
 	skyboxProgram.Use()
@@ -54,7 +65,7 @@ func (sky *Skybox) Draw(view, projection mgl32.Mat4) {
 	gl.BindVertexArray(sky.Vao.VaoID)
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, sky.TextureID)
-	gl.DrawArrays(gl.TRIANGLES, 0, 36)
+	gl.DrawArrays(gl.TRIANGLES, 0, 36) // actually draws skybox
 	gl.BindVertexArray(0)
 	gl.DepthFunc(gl.LESS) // set depth function back to default
 }
@@ -67,7 +78,6 @@ func (sky *Skybox) Draw(view, projection mgl32.Mat4) {
 // -Y (bottom)
 // +Z (front)
 // -Z (back)
-// -------------------------------------------------------
 func loadCubemap(faces []*image.RGBA) uint32 {
 	var textureID uint32
 	gl.GenTextures(1, &textureID)

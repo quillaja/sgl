@@ -18,6 +18,7 @@ can use go port of imgui for gui.
 - 0.4.0
     - skybox
     - resizable window option at creation
+    - small api changes to `Texture2D`
 - 0.3.0
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui

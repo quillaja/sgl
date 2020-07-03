@@ -9,11 +9,8 @@ import (
 	"github.com/go-gl/gl/v3.3-core/gl"
 )
 
-type Texture2D struct {
-	ID            uint32
-	Width, Height int32
-}
-
+// OpenImages opens the images specified by filename and converts them to
+// RGBA format.
 func OpenImages(filenames ...string) ([]*image.RGBA, error) {
 	images := make([]*image.RGBA, 0, len(filenames))
 
@@ -37,6 +34,11 @@ func OpenImages(filenames ...string) ([]*image.RGBA, error) {
 	}
 
 	return images, nil
+}
+
+type Texture2D struct {
+	ID            uint32
+	Width, Height int32
 }
 
 func NewTexture2D(rgba *image.RGBA) (*Texture2D, error) {
