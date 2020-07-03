@@ -6,13 +6,18 @@ can use go port of imgui for gui.
 - [ ] some useful 'premade' shader programs
     - [ ] 2d image "splat" (png, jpg, image.Image,...)
     - [ ] 3d shapes with vertex colors, normals, textures, point/directional lights
+    - [ ] skybox
 - [ ] More opengl features.
 - [ ] Improve text/font rendering in `font.go`.
+    - should be able to queue all strings into a single vbo with vertex coords and texture coords, then draw all in a single draw call.
 - [x] rename some types and functions.
 - [x] add utilites (from my gaia stars program)
 - [ ] make `Texture2D` more flexible
 
 ## Changelog
+- 0.4.0
+    - skybox
+    - resizable window option at creation
 - 0.3.0
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui

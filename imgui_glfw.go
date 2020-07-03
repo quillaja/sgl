@@ -91,6 +91,7 @@ type WindowMetric struct {
 	X, Y       int
 	W, H       int
 	Fullscreen bool
+	Resizable  bool
 }
 
 // WindowOption sets a option during window creation.
@@ -101,7 +102,9 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	var platform *Window
 
 	// i always just use these, so just set them here to simplify window creation
-	glfw.WindowHint(glfw.Resizable, glfw.False)
+	if !size.Resizable {
+		glfw.WindowHint(glfw.Resizable, glfw.False)
+	}
 	glfw.WindowHint(glfw.Visible, glfw.False)
 	glfw.WindowHint(glfw.ContextVersionMajor, 3)
 	glfw.WindowHint(glfw.ContextVersionMinor, 3)

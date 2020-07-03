@@ -14,29 +14,35 @@ type Texture2D struct {
 	Width, Height int32
 }
 
-func NewTextureFile(file string) (*Texture2D, error) {
-	imgFile, err := os.Open(file)
-	if err != nil {
-		return nil, fmt.Errorf("texture %q not found on disk: %v", file, err)
-	}
-	img, _, err := image.Decode(imgFile)
-	if err != nil {
-		return nil, err
+func OpenImages(filenames ...string) ([]*image.RGBA, error) {
+	images := make([]*image.RGBA, 0, len(filenames))
+
+	for _, file := range filenames {
+		imgFile, err := os.Open(file)
+		if err != nil {
+			return nil, fmt.Errorf("could not open %s: %w", file, err)
+		}
+		img, _, err := image.Decode(imgFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode %s: %w", file, err)
+		}
+
+		rgba := image.NewRGBA(img.Bounds())
+		if rgba.Stride != rgba.Rect.Size().X*4 { // NOTE: pointless check?
+			return nil, fmt.Errorf("unsupported stride")
+		}
+		draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
+
+		images = append(images, rgba)
 	}
 
-	rgba := image.NewRGBA(img.Bounds())
-	if rgba.Stride != rgba.Rect.Size().X*4 {
-		return nil, fmt.Errorf("unsupported stride")
-	}
-	draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
-
-	return NewTextureRGBA(rgba)
+	return images, nil
 }
 
-func NewTextureRGBA(rgba *image.RGBA) (*Texture2D, error) {
+func NewTexture2D(rgba *image.RGBA) (*Texture2D, error) {
 	texture := &Texture2D{
-		Width:  int32(rgba.Rect.Size().X),
-		Height: int32(rgba.Rect.Size().Y),
+		Width:  int32(rgba.Bounds().Dx()),
+		Height: int32(rgba.Bounds().Dy()),
 	}
 
 	gl.GenTextures(1, &texture.ID)
@@ -51,11 +57,11 @@ func NewTextureRGBA(rgba *image.RGBA) (*Texture2D, error) {
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
 		0,
-		gl.RGBA,
+		gl.RGBA, // internal texture format
 		texture.Width,
 		texture.Height,
 		0,
-		gl.RGBA,
+		gl.RGBA, // image format
 		gl.UNSIGNED_BYTE,
 		gl.Ptr(rgba.Pix))
 
