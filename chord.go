@@ -2,49 +2,55 @@ package sgl
 
 import (
 	"sort"
+	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 type Chord struct {
-	Keys    []glfw.Key
-	Execute func()
-	Wait    float64
-	t       float64
+	lastPressed time.Time
+	Keys        []glfw.Key
+	Mouse       []glfw.MouseButton
+	Execute     func()
+	Wait        float64
+	Stop        bool // TODO: implement
 }
 
-func (c *Chord) Match(win *glfw.Window, dt float64) bool {
+func (c *Chord) Match(win *glfw.Window) bool {
 	// decrease time
-	if c.t > 0 {
-		c.t -= dt
+	if time.Since(c.lastPressed).Seconds() < c.Wait {
 		return false
 	}
-	c.t = 0 // prevent going negative
 
 	for i := range c.Keys {
 		if win.GetKey(c.Keys[i]) != glfw.Press {
 			return false
 		}
 	}
+	for i := range c.Mouse {
+		if win.GetMouseButton(c.Mouse[i]) != glfw.Press {
+			return false
+		}
+	}
 
-	c.t = c.Wait // reset
+	c.lastPressed = time.Now() // reset
 	return true
 }
 
 type ChordSet []Chord
 
-func (cs ChordSet) Match(win *glfw.Window, dt float64) *Chord {
+func (cs ChordSet) Match(win *glfw.Window) *Chord {
 	var i int
 	for i = 0; i < len(cs); i++ {
-		if cs[i].Match(win, dt) {
+		if cs[i].Match(win) {
 			return &cs[i]
 		}
 	}
 	return nil
 }
 
-func (cs ChordSet) Execute(win *glfw.Window, dt float64) {
-	if match := cs.Match(win, dt); match != nil {
+func (cs ChordSet) Execute(win *glfw.Window) {
+	if match := cs.Match(win); match != nil {
 		match.Execute()
 	}
 }
@@ -81,11 +87,11 @@ func CombineSets(sets ...ChordSet) []ChordSet {
 	return sets
 }
 
-func ExecuteSets(sets []ChordSet, win *glfw.Window, dt float64) {
+func ExecuteSets(sets []ChordSet, win *glfw.Window) {
 	// using defer here so all the "searching" can be done first,
 	// then all the actual exections
 	for i := range sets {
-		if match := sets[i].Match(win, dt); match != nil {
+		if match := sets[i].Match(win); match != nil {
 			defer match.Execute()
 		}
 	}
