@@ -20,7 +20,7 @@ func invLerp(x, min, max float32) float32 {
 type Timer struct {
 	TotalFrames uint64
 	TotalTime   float64
-	DeltaT      float64
+	DeltaT      float64 // Seconds
 	Start       time.Time
 	Now         time.Time
 }

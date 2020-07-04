@@ -47,7 +47,9 @@ type Window struct {
 	// Basically 'read only' info about the dimensions of the window.
 	Dimensions WindowMetric
 
-	time             float64
+	// Updated each frame.
+	Clock Timer
+
 	mouseJustPressed [3]bool
 }
 
@@ -140,6 +142,7 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	// save initial window position and size
 	platform.Dimensions.X, platform.Dimensions.Y = platform.GlfwWindow.GetPos()
 	platform.Dimensions.W, platform.Dimensions.H = platform.GlfwWindow.GetSize()
+	platform.Dimensions.Resizable = size.Resizable // may not be valid if hint is ignored
 
 	platform.installWindowDimensionsCallbacks()
 
@@ -232,6 +235,20 @@ func (platform *Window) Dispose() {
 	if platform.Gui != nil {
 		platform.Gui.Destroy()
 	}
+}
+
+// InitLoop should be called once at the beginning of the render loop.
+func (platform *Window) InitLoop() {
+	platform.Clock.Reset()
+}
+
+// BeginFrame updates certain state for the new frame, and returns true
+// if the render loop should continue running.
+func (platform *Window) BeginFrame() (continueRendering bool) {
+	platform.Clock.Update()
+	platform.PollEvents()
+	platform.SwapBuffers()
+	return !platform.ShouldClose()
 }
 
 // ShouldClose returns true if the window is to be closed.
@@ -359,9 +376,7 @@ func (platform *Window) forwardStateToImgui() {
 	platform.Gui.IO.SetDisplaySize(imgui.Vec2{X: displaySize[0], Y: displaySize[1]})
 
 	// Setup time step
-	currentTime := glfw.GetTime()
-	platform.Gui.IO.SetDeltaTime(float32(currentTime - platform.time))
-	platform.time = currentTime
+	platform.Gui.IO.SetDeltaTime(float32(platform.Clock.DeltaT))
 
 	// Setup inputs
 	if platform.GlfwWindow.GetAttrib(glfw.Focused) != 0 {

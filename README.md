@@ -19,6 +19,10 @@ can use go port of imgui for gui.
     - skybox
     - resizable window option at creation
     - small api changes to `Texture2D`
+    - `Selecter` uitility, basically for easier imgui combo and list boxes
+    - changes to Chord/ChordSet that simplfy api and fix a subtle timing bug.
+    - addition to Window of "Timer" named Clock
+    - additions to Window for use in rendering loop control
 - 0.3.0
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui
