@@ -1,6 +1,8 @@
 package sgl
 
 import (
+	"fmt"
+	"sort"
 	"time"
 
 	"github.com/go-gl/mathgl/mgl32"
@@ -51,8 +53,11 @@ func (t *Timer) Fps() float64 {
 	return 1.0 / t.DeltaT
 }
 
-// Cycler lets one easily cycle through a list of "whatever".
+// Cycler lets one easily cycle through a list of "whatever". It's a
+// simpler version of Selecter that doesn't name items and allows only
+// relative (Next() and Previous()) selection changes.
 type Cycler struct {
+	Title   string
 	Current int
 	Things  []interface{}
 }
@@ -72,6 +77,154 @@ func (c *Cycler) Next() {
 	c.Current++
 	if c.Current == len(c.Things) {
 		c.Current = 0
+	}
+}
+
+// Previous moves to the previous item, or wraps around if at the begining.
+func (c *Cycler) Previous() {
+	c.Current--
+	if c.Current == -1 {
+		c.Current = len(c.Things) - 1
+	}
+}
+
+// NamedItems is a slice of structs that pairs a Name string with any Item.
+type NamedItems []selecteritem
+
+// MakeItems creates a NamedItems from the provided "items". Items
+// implementing fmt.Stringer use that for Name. Most other types use their
+// (possibly truncated) go representation, which will be annotated with its
+// type for types such as slices, structs, etc.
+func MakeItems(items ...interface{}) NamedItems {
+	list := make(NamedItems, 0, len(items))
+	for i, item := range items {
+		var name string
+		switch v := item.(type) {
+		case string:
+			name = v
+		case int, int8, uint8, int32, uint32, int64, uint64, float32, float64:
+			name = fmt.Sprintf("%v", v)
+		case fmt.Stringer:
+			name = v.String()
+		default:
+			//name = fmt.Sprintf("%T %d", item, i)
+			const maxlen = 42
+			name = fmt.Sprintf("(%d) %T %+v", i, item, item)
+			if len(name) > maxlen {
+				name = name[:maxlen] + "..."
+			}
+		}
+		list = append(list, selecteritem{
+			Name: name,
+			Item: item,
+		})
+	}
+	return list
+}
+
+// Sort the NamedItems by Name, descending (alphabetical).
+// Returns the NamedItems for "inline" use.
+func (items NamedItems) Sort() NamedItems {
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name < items[j].Name
+	})
+	return items
+}
+
+type selecteritem struct {
+	Name string
+	Item interface{}
+}
+
+// TODO: make Selecter able to handle multiple selected items. Perhaps another
+// slice of bool as "selected toggles"?
+
+// Selecter lets someone create an indexed list of "whatever" with an associated name.
+// The current selection can be changed absolutely (with Set()) or relatively (with Next()
+// and Previous()). Only 1 item can be selected.
+// This is helpful for use with imgui's combo box or list box.
+type Selecter struct {
+	Title   string
+	Current int
+	Things  []interface{}
+	Names   []string
+}
+
+// NewSelecter creates a Selecter using the items to populate its Things and
+// Names slices.
+func NewSelecter(items NamedItems) *Selecter {
+	s := Selecter{
+		Things: make([]interface{}, len(items)),
+		Names:  make([]string, len(items)),
+	}
+	for i := range items {
+		s.Things[i] = items[i].Item
+		s.Names[i] = items[i].Name
+	}
+	return &s
+}
+
+// Get the current item.
+// example:
+//  fmt.Println(selecter.Get().Name)
+//	thing := selecter.Get().Item.(mytype)
+func (s *Selecter) Get() selecteritem {
+	return selecteritem{Item: s.Things[s.Current], Name: s.Names[s.Current]}
+}
+
+// Selected returns true if index is the current selection.
+func (s *Selecter) Selected(index int) bool {
+	return s.Current == index
+}
+
+// SelectedName performs a linear search on the Names slice for name
+// and, if a match is found, returns true if it is the current selection.
+func (s *Selecter) SelectedName(name string) bool {
+	for i := range s.Names {
+		if s.Names[i] == name {
+			return s.Selected(i)
+		}
+	}
+	return false
+}
+
+// Set the current selection. index is clamped to the
+// bounds of the Things slice.
+func (s *Selecter) Set(index int) {
+	if index >= len(s.Things) {
+		index = len(s.Things) - 1
+	}
+	if index < 0 {
+		index = 0
+	}
+	s.Current = index
+}
+
+// SetName performs a linear search on the Names slice for name
+// and, if a match is found, sets it to the current selection.
+// No change is performed if a match is not found.
+func (s *Selecter) SetName(name string) {
+	for i := range s.Names {
+		if s.Names[i] == name {
+			s.Set(i)
+			return
+		}
+	}
+}
+
+// Next changes the selection to the next item, or wraps around if at the end.
+func (s *Selecter) Next() {
+	s.Current++
+	if s.Current == len(s.Things) {
+		s.Current = 0
+	}
+}
+
+// Previous changes the selection to the previous item, or wraps around if at the end.
+func (s *Selecter) Previous() {
+	s.Current--
+	if s.Current == -1 {
+		s.Current = len(s.Things) - 1
 	}
 }
 
