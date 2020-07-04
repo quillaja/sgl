@@ -53,6 +53,16 @@ func (t *Timer) Fps() float64 {
 	return 1.0 / t.DeltaT
 }
 
+// IsNthFrame returns true if the current frame number is on the "nth" since
+// the timer was last reset. Just frame count mod n == 0.
+// Example:
+//  if timer.IsNthFrame(2) {
+//  	// do something every other frame
+//  }
+func (t *Timer) IsNthFrame(n uint64) bool {
+	return t.TotalFrames%n == 0
+}
+
 // Cycler lets one easily cycle through a list of "whatever". It's a
 // simpler version of Selecter that doesn't name items and allows only
 // relative (Next() and Previous()) selection changes.

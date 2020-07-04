@@ -6,7 +6,7 @@ can use go port of imgui for gui.
 - [ ] some useful 'premade' shader programs
     - [ ] 2d image "splat" (png, jpg, image.Image,...)
     - [ ] 3d shapes with vertex colors, normals, textures, point/directional lights
-    - [ ] skybox
+    - [x] skybox
 - [ ] More opengl features.
 - [ ] Improve text/font rendering in `font.go`.
     - should be able to queue all strings into a single vbo with vertex coords and texture coords, then draw all in a single draw call.
@@ -23,6 +23,7 @@ can use go port of imgui for gui.
     - changes to Chord/ChordSet that simplfy api and fix a subtle timing bug.
     - addition to Window of "Timer" named Clock
     - additions to Window for use in rendering loop control
+    - addition of "IsNthFrame()" to Timer
 - 0.3.0
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui
