@@ -4,10 +4,20 @@ import (
 	"github.com/go-gl/gl/v3.3-core/gl"
 )
 
+// Easier access to gl "draw mode" types.
+const (
+	Triangles     = gl.TRIANGLES
+	Points        = gl.POINTS
+	Lines         = gl.LINES
+	TriangleStrip = gl.TRIANGLE_STRIP
+	TriangleFan   = gl.TRIANGLE_FAN
+)
+
 type Vao struct {
 	VaoID         uint32       // id for vao
 	Vbo           uint32       // id for vertex buffer object associated with this vao
 	Ebo           uint32       // id for element (vertex index) buffer associated with this vao
+	DrawMode      uint32       // "mode" for drawing, such as TRIANGLES or LINES
 	Tex           []*Texture2D // ids for all textures to be used with this vao (on draw)
 	Prog          *Program     // program to load when drawing
 	floatsPerVert int32
@@ -15,10 +25,11 @@ type Vao struct {
 	eboVertCount  int32
 }
 
-func NewVao(program *Program) *Vao {
+func NewVao(drawMode uint32, program *Program) *Vao {
 	v := &Vao{
-		Prog: program,
-		Tex:  make([]*Texture2D, 0),
+		DrawMode: drawMode,
+		Prog:     program,
+		Tex:      make([]*Texture2D, 0),
 	}
 
 	gl.GenVertexArrays(1, &v.VaoID)
@@ -62,14 +73,22 @@ func (v *Vao) CountVerts() int32 {
 	return v.vboVertCount
 }
 
-func (v *Vao) SetVbo(sizeInBytes int, data []float32, usage uint32) {
+func (v *Vao) SetVbo(data []float32) {
+	v.SetVboOptions(SizeOfFloat*len(data), data, gl.STATIC_DRAW)
+}
+
+func (v *Vao) SetEbo(data []uint32) {
+	v.SetEboOptions(SizeOfInt*len(data), data, gl.STATIC_DRAW)
+}
+
+func (v *Vao) SetVboOptions(sizeInBytes int, data []float32, usage uint32) {
 	v.vboVertCount = int32(len(data)) / v.floatsPerVert
 	gl.BindBuffer(gl.ARRAY_BUFFER, v.Vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, sizeInBytes, gl.Ptr(data), usage)
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0) // unbind
 }
 
-func (v *Vao) SetEbo(sizeInBytes int, data []uint32, usage uint32) {
+func (v *Vao) SetEboOptions(sizeInBytes int, data []uint32, usage uint32) {
 	v.eboVertCount = int32(len(data))
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, v.Ebo)
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, sizeInBytes, gl.Ptr(data), usage)
@@ -86,8 +105,13 @@ func (v *Vao) SetTexture(uniformName string, texture *Texture2D) {
 	v.Prog.Fragment().SetInt(uniformName, 1, &texNumber)
 }
 
-// Draw call Vao.Prog.Use() before drawing.
-func (v *Vao) Draw(mode uint32, first, count int32) {
+// Draw call Vao.Prog.Use() first!
+func (v *Vao) Draw() {
+	v.DrawOptions(v.DrawMode, 0, v.CountVerts())
+}
+
+// DrawOptions call Vao.Prog.Use() before drawing.
+func (v *Vao) DrawOptions(mode uint32, first, count int32) {
 
 	// load texture uniforms in fragment shader
 	for i, tex := range v.Tex {

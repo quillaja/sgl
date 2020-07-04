@@ -24,6 +24,7 @@ can use go port of imgui for gui.
     - addition to Window of "Timer" named Clock
     - additions to Window for use in rendering loop control
     - addition of "IsNthFrame()" to Timer
+    - simplify Vao to make mostly-unused params to Set*() and Draw() use defaults.
 - 0.3.0
     - changed/"fixed" imgui renderer to display images in color
     - modified window creation api to allow for fonts with imgui

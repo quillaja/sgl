@@ -37,8 +37,8 @@ func NewSkybox(faces []*image.RGBA) (*Skybox, error) {
 		}
 	}
 
-	vao := NewVao(skyboxProgram)
-	vao.SetVbo(SizeOfFloat*len(skyboxVertices), skyboxVertices, gl.STATIC_DRAW)
+	vao := NewVao(Triangles, skyboxProgram)
+	vao.SetVbo(skyboxVertices)
 
 	sky := &Skybox{
 		TextureID: loadCubemap(faces),

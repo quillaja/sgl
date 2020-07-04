@@ -271,6 +271,9 @@ func (platform *Window) ClearBuffers() {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 }
 
+// CanUseGui tests if imgui is configured ("Gui" is non-nil).
+func (platform *Window) CanUseGui() bool { return platform.Gui != nil }
+
 // RenderImgui will perform the beginning and ending steps of rendering
 // the imgui constructed by calls to the imgui pkg in the 'gui' function.
 func (platform *Window) RenderImgui(gui func()) {
