@@ -11,6 +11,21 @@ import (
 // only need this once in the package
 var skyboxProgram *Program
 
+// called to create and build the skybox program.
+func initSkyboxProgram() error {
+	skyboxProgram = NewProgram()
+	skyboxProgram.AddShader(VertexShader, skyboxVertexShader,
+		[]string{"projection", "view"},
+		Attribute{Name: "aPos", Type: gl.FLOAT, Size: 3, Stride: 3 * SizeOfFloat, Offset: 0})
+	skyboxProgram.AddShader(FragmentShader, skyboxFragmentShader, []string{"skybox"})
+
+	errBuild := skyboxProgram.Build()
+	if errBuild != nil {
+		return fmt.Errorf("couldn't build skybox program: %w", errBuild)
+	}
+	return nil
+}
+
 // Skybox is a complete cubemap skybox.
 type Skybox struct {
 	TextureID uint32
@@ -26,14 +41,8 @@ type Skybox struct {
 //     -Z (back)
 func NewSkybox(faces []*image.RGBA) (*Skybox, error) {
 	if skyboxProgram == nil {
-		skyboxProgram = NewProgram()
-		skyboxProgram.AddShader(VertexShader, skyboxVertexShader,
-			[]string{"projection", "view"},
-			Attribute{Name: "aPos", Type: gl.FLOAT, Size: 3, Stride: 3 * SizeOfFloat, Offset: 0})
-		skyboxProgram.AddShader(FragmentShader, skyboxFragmentShader, []string{"skybox"})
-		errBuild := skyboxProgram.Build()
-		if errBuild != nil {
-			return nil, fmt.Errorf("couldn't build skybox program: %w", errBuild)
+		if progErr := initSkyboxProgram(); progErr != nil {
+			return nil, progErr
 		}
 	}
 
