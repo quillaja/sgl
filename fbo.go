@@ -2,6 +2,7 @@ package sgl
 
 import (
 	"fmt"
+	"image"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
 )
@@ -66,4 +67,16 @@ func (fbo *Fbo) Delete() {
 // Use binds the FBO for use.
 func (fbo *Fbo) Use() {
 	gl.BindFramebuffer(gl.FRAMEBUFFER, fbo.ID)
+}
+
+// ReadImage gets a Go image from the color buffer of the FBO.
+// NOTE: should probably be a method on Texture2D
+func (fbo *Fbo) ReadImage() *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, int(fbo.Width), int(fbo.Height)))
+	gl.BindTexture(gl.TEXTURE_2D, fbo.ColorBufferTex.ID)
+	gl.GetTexImage(gl.TEXTURE_2D, 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(img.Pix))
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+
+	flipVertically(img)
+	return img
 }
