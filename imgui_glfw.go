@@ -44,6 +44,9 @@ type Window struct {
 	// Allows direct access to the glfw window.
 	GlfwWindow *glfw.Window
 
+	// OpenGL version and driver info.
+	GlVersion string
+
 	// Basically 'read only' info about the dimensions of the window.
 	Dimensions WindowMetric
 
@@ -137,6 +140,7 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 
 	platform = &Window{
 		GlfwWindow: window,
+		GlVersion:  gl.GoStr(gl.GetString(gl.VERSION)),
 	}
 
 	// save initial window position and size
@@ -317,16 +321,20 @@ func (platform *Window) ScreenCapture() image.Image {
 	gl.ReadBuffer(gl.FRONT)
 	gl.ReadPixels(0, 0, int32(w), int32(h), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(rgba.Pix))
 
-	// flip image vertically
-	temp := make([]byte, 4*rgba.Stride)
-	for y := 0; y < rgba.Bounds().Dy()/2; y++ {
-		top := rgba.Pix[y*rgba.Stride : (y+1)*rgba.Stride]
-		bottom := rgba.Pix[(rgba.Bounds().Dy()-1-y)*rgba.Stride : (rgba.Bounds().Dy()-y)*rgba.Stride]
+	flipVertically(rgba)
+	return rgba
+}
+
+// flip image vertically
+func flipVertically(img *image.RGBA) {
+	temp := make([]byte, img.Stride)
+	for y := 0; y < img.Bounds().Dy()/2; y++ {
+		top := img.Pix[y*img.Stride : (y+1)*img.Stride]
+		bottom := img.Pix[(img.Bounds().Dy()-1-y)*img.Stride : (img.Bounds().Dy()-y)*img.Stride]
 		copy(temp, top)
 		copy(top, bottom)
 		copy(bottom, temp)
 	}
-	return rgba
 }
 
 // ClipboardText returns the current clipboard text, if available.
