@@ -15,6 +15,9 @@ can use go port of imgui for gui.
 - [ ] make `Texture2D` more flexible
 
 ## Changelog
+- 0.5.0
+    - ChordSet functionality changed so chords are executed until all matching
+    chords are executed or a chord with "Stop" set to true is executed.
 - 0.4.0
     - skybox
     - resizable window option at creation

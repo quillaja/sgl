@@ -7,17 +7,20 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
+// Chord is an input "gesture", which may be one or more keys (eg CTRL+ALT+T).
 type Chord struct {
 	lastPressed time.Time
-	Keys        []glfw.Key
-	Mouse       []glfw.MouseButton
-	Execute     func()
-	Wait        float64
-	Stop        bool // TODO: implement
+	Keys        []glfw.Key // List of keys to be down to execute this chord
+	Execute     func()     // function to execute
+	Wait        float64    // Wait time (seconds) between sucessive allowable executions
+	Stop        bool       // When set, no further chords will be executed after this one has been
+	// Mouse       []glfw.MouseButton
 }
 
+// Match determines whether or not the keys for this chord are pressed and if
+// the chord's Wait time has elapsed.
 func (c *Chord) Match(win *glfw.Window) bool {
-	// decrease time
+	// check wait time
 	if time.Since(c.lastPressed).Seconds() < c.Wait {
 		return false
 	}
@@ -27,18 +30,21 @@ func (c *Chord) Match(win *glfw.Window) bool {
 			return false
 		}
 	}
-	for i := range c.Mouse {
-		if win.GetMouseButton(c.Mouse[i]) != glfw.Press {
-			return false
-		}
-	}
+	// for i := range c.Mouse {
+	// 	if win.GetMouseButton(c.Mouse[i]) != glfw.Press {
+	// 		return false
+	// 	}
+	// }
 
 	c.lastPressed = time.Now() // reset
 	return true
 }
 
+// ChordSet is a logic grouping of (related) Chords.
 type ChordSet []Chord
 
+// Match returns first Chord in the set that matches the current
+// key state.
 func (cs ChordSet) Match(win *glfw.Window) *Chord {
 	var i int
 	for i = 0; i < len(cs); i++ {
@@ -49,10 +55,24 @@ func (cs ChordSet) Match(win *glfw.Window) *Chord {
 	return nil
 }
 
+// Execute runs the function for each Chord that matches
+// the current key state. Execution of chords will stop when
+// the first chord is encountered with its "Stop" member set to true.
 func (cs ChordSet) Execute(win *glfw.Window) {
-	if match := cs.Match(win); match != nil {
-		match.Execute()
+	var done bool
+	for i := 0; i < len(cs) && !done; i++ {
+		if cs[i].Match(win) {
+			cs[i].Execute()
+			done = cs[i].Stop
+		}
 	}
+}
+
+// Sort called sort.Sort() on the ChordSet, returning the same
+// ChordSet for convenience.
+func (cs ChordSet) Sort() ChordSet {
+	sort.Sort(cs)
+	return cs
 }
 
 // Len is the number of elements in the collection.
@@ -80,6 +100,7 @@ func (cs ChordSet) Swap(i int, j int) {
 	cs[i], cs[j] = cs[j], cs[i]
 }
 
+// CombineSets makes a slice of ChordSets for convenience, sorting each one.
 func CombineSets(sets ...ChordSet) []ChordSet {
 	for i := range sets {
 		sort.Sort(sets[i])
@@ -87,12 +108,11 @@ func CombineSets(sets ...ChordSet) []ChordSet {
 	return sets
 }
 
+// ExecuteSets calls Execute() on each ChordSet.
 func ExecuteSets(sets []ChordSet, win *glfw.Window) {
 	// using defer here so all the "searching" can be done first,
 	// then all the actual exections
 	for i := range sets {
-		if match := sets[i].Match(win); match != nil {
-			defer match.Execute()
-		}
+		sets[i].Execute(win)
 	}
 }
