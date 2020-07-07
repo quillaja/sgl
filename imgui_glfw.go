@@ -54,6 +54,11 @@ type Window struct {
 	Clock Timer
 
 	mouseJustPressed [3]bool
+
+	keyCallbacks    []glfw.KeyCallback
+	mouseCallbacks  []glfw.MouseButtonCallback
+	scrollCallbacks []glfw.ScrollCallback
+	charCallbacks   []glfw.CharCallback
 }
 
 // FontMap associates a friendly name (key) with info about a font loaded
@@ -149,6 +154,7 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	platform.Dimensions.Resizable = size.Resizable // may not be valid if hint is ignored
 
 	platform.installWindowDimensionsCallbacks()
+	platform.installControlCallbacks()
 
 	for i, option := range options {
 		optErr := option(platform)
@@ -347,6 +353,38 @@ func (platform *Window) SetClipboardText(text string) {
 	platform.GlfwWindow.SetClipboardString(text)
 }
 
+func (platform *Window) AddKeyCallback(callback glfw.KeyCallback) {
+	platform.keyCallbacks = append(platform.keyCallbacks, callback)
+}
+
+// func (platform *Window) RemoveKeyCallback(callback *glfw.KeyCallback) {
+// 	delete(platform.keyCallbacks, callback)
+// }
+
+func (platform *Window) AddMouseButtonCallback(callback glfw.MouseButtonCallback) {
+	platform.mouseCallbacks = append(platform.mouseCallbacks, callback)
+}
+
+// func (platform *Window) RemoveMouseButtonCallback(callback glfw.MouseButtonCallback) {
+// 	delete(platform.mouseCallbacks, callback)
+// }
+
+func (platform *Window) AddScrollCallback(callback glfw.ScrollCallback) {
+	platform.scrollCallbacks = append(platform.scrollCallbacks, callback)
+}
+
+// func (platform *Window) RemoveScrollCallback(callback *glfw.ScrollCallback) {
+// 	delete(platform.scrollCallbacks, callback)
+// }
+
+func (platform *Window) AddCharCallback(callback glfw.CharCallback) {
+	platform.charCallbacks = append(platform.charCallbacks, callback)
+}
+
+// func (platform *Window) RemoveCharCallback(callback *glfw.CharCallback) {
+// 	delete(platform.charCallbacks, callback)
+// }
+
 // installWindowDimensionsCallbacks set various window/frame size callbacks
 func (platform *Window) installWindowDimensionsCallbacks() {
 	platform.GlfwWindow.SetPosCallback(func(w *glfw.Window, xpos, ypos int) {
@@ -363,6 +401,32 @@ func (platform *Window) installWindowDimensionsCallbacks() {
 	})
 	platform.GlfwWindow.SetFramebufferSizeCallback(func(w *glfw.Window, width, height int) {
 		gl.Viewport(0, 0, int32(width), int32(height))
+	})
+}
+
+func (platform *Window) installControlCallbacks() {
+	platform.GlfwWindow.SetMouseButtonCallback(func(w *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
+		for _, cb := range platform.mouseCallbacks {
+			cb(w, button, action, mods)
+		}
+	})
+
+	platform.GlfwWindow.SetScrollCallback(func(w *glfw.Window, xoff, yoff float64) {
+		for _, cb := range platform.scrollCallbacks {
+			cb(w, xoff, yoff)
+		}
+	})
+
+	platform.GlfwWindow.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		for _, cb := range platform.keyCallbacks {
+			cb(w, key, scancode, action, mods)
+		}
+	})
+
+	platform.GlfwWindow.SetCharCallback(func(w *glfw.Window, char rune) {
+		for _, cb := range platform.charCallbacks {
+			cb(w, char)
+		}
 	})
 }
 
@@ -430,10 +494,10 @@ func (platform *Window) setImguiKeyMapping() {
 }
 
 func (platform *Window) installImguiCallbacks() {
-	platform.GlfwWindow.SetMouseButtonCallback(platform.mouseButtonChange)
-	platform.GlfwWindow.SetScrollCallback(platform.mouseScrollChange)
-	platform.GlfwWindow.SetKeyCallback(platform.keyChange)
-	platform.GlfwWindow.SetCharCallback(platform.charChange)
+	platform.AddMouseButtonCallback(platform.guiMouseButtonChange)
+	platform.AddScrollCallback(platform.guiMouseScrollChange)
+	platform.AddKeyCallback(platform.guiKeyChange)
+	platform.AddCharCallback(platform.guiCharChange)
 }
 
 var glfwButtonIndexByID = map[glfw.MouseButton]int{
@@ -448,7 +512,7 @@ var glfwButtonIDByIndex = map[int]glfw.MouseButton{
 	2: glfw.MouseButton3,
 }
 
-func (platform *Window) mouseButtonChange(window *glfw.Window, rawButton glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
+func (platform *Window) guiMouseButtonChange(window *glfw.Window, rawButton glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
 	buttonIndex, known := glfwButtonIndexByID[rawButton]
 
 	if known && (action == glfw.Press) {
@@ -456,11 +520,11 @@ func (platform *Window) mouseButtonChange(window *glfw.Window, rawButton glfw.Mo
 	}
 }
 
-func (platform *Window) mouseScrollChange(window *glfw.Window, x, y float64) {
+func (platform *Window) guiMouseScrollChange(window *glfw.Window, x, y float64) {
 	platform.Gui.IO.AddMouseWheelDelta(float32(x), float32(y))
 }
 
-func (platform *Window) keyChange(window *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+func (platform *Window) guiKeyChange(window *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 	if action == glfw.Press {
 		platform.Gui.IO.KeyPress(int(key))
 	}
@@ -475,6 +539,6 @@ func (platform *Window) keyChange(window *glfw.Window, key glfw.Key, scancode in
 	platform.Gui.IO.KeySuper(int(glfw.KeyLeftSuper), int(glfw.KeyRightSuper))
 }
 
-func (platform *Window) charChange(window *glfw.Window, char rune) {
+func (platform *Window) guiCharChange(window *glfw.Window, char rune) {
 	platform.Gui.IO.AddInputCharacters(string(char))
 }

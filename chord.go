@@ -11,10 +11,10 @@ import (
 type Chord struct {
 	lastPressed time.Time
 	Keys        []glfw.Key // List of keys to be down to execute this chord
-	Execute     func()     // function to execute
-	Wait        float64    // Wait time (seconds) between sucessive allowable executions
-	Stop        bool       // When set, no further chords will be executed after this one has been
-	// Mouse       []glfw.MouseButton
+	Mouse       []glfw.MouseButton
+	Execute     func()  // function to execute
+	Wait        float64 // Wait time (seconds) between sucessive allowable executions
+	Stop        bool    // When set, no further chords will be executed after this one has been
 }
 
 // Match determines whether or not the keys for this chord are pressed and if
@@ -30,11 +30,11 @@ func (c *Chord) Match(win *glfw.Window) bool {
 			return false
 		}
 	}
-	// for i := range c.Mouse {
-	// 	if win.GetMouseButton(c.Mouse[i]) != glfw.Press {
-	// 		return false
-	// 	}
-	// }
+	for i := range c.Mouse {
+		if win.GetMouseButton(c.Mouse[i]) != glfw.Press {
+			return false
+		}
+	}
 
 	c.lastPressed = time.Now() // reset
 	return true
