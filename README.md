@@ -18,6 +18,8 @@ can use go port of imgui for gui.
 - 0.5.0
     - ChordSet functionality changed so chords are executed until all matching
     chords are executed or a chord with "Stop" set to true is executed.
+    - icon loading window option.
+    - convienience function to get font names from FontMap for use in Selecter.
 - 0.4.0
     - skybox
     - resizable window option at creation

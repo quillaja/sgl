@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"os"
 	"runtime"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
@@ -70,6 +71,16 @@ type FontMap map[string]struct {
 	Font     imgui.Font
 }
 
+// Names gets the friendly names (keys) from a FontMap. interface{} is used
+// instead of string for easy use in a Selecter.
+func (fm FontMap) Names() []interface{} {
+	names := make([]interface{}, 0, len(fm))
+	for n := range fm {
+		names = append(names, n)
+	}
+	return names
+}
+
 // a convenient struct to hold data related to imgui.
 type imguiData struct {
 	IO       imgui.IO
@@ -109,7 +120,7 @@ type WindowOption func(*Window) error
 
 // NewWindow attempts to initialize a GLFW context/window/imgui etc.
 func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Window, error) {
-	var platform *Window
+	var win *Window
 
 	// i always just use these, so just set them here to simplify window creation
 	if !size.Resizable {
@@ -137,33 +148,33 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	defer func() {
 		if window != nil {
 			if size.Fullscreen {
-				platform.Fullscreen(true, 0, 0)
+				win.Fullscreen(true, 0, 0)
 			}
 			window.Show()
 		}
 	}()
 
-	platform = &Window{
+	win = &Window{
 		GlfwWindow: window,
 		GlVersion:  gl.GoStr(gl.GetString(gl.VERSION)),
 	}
 
 	// save initial window position and size
-	platform.Dimensions.X, platform.Dimensions.Y = platform.GlfwWindow.GetPos()
-	platform.Dimensions.W, platform.Dimensions.H = platform.GlfwWindow.GetSize()
-	platform.Dimensions.Resizable = size.Resizable // may not be valid if hint is ignored
+	win.Dimensions.X, win.Dimensions.Y = win.GlfwWindow.GetPos()
+	win.Dimensions.W, win.Dimensions.H = win.GlfwWindow.GetSize()
+	win.Dimensions.Resizable = size.Resizable // may not be valid if hint is ignored
 
-	platform.installWindowDimensionsCallbacks()
-	platform.installControlCallbacks()
+	win.installWindowDimensionsCallbacks()
+	win.installControlCallbacks()
 
 	for i, option := range options {
-		optErr := option(platform)
+		optErr := option(win)
 		if optErr != nil {
 			return nil, fmt.Errorf("option %d had an error: %w", i, optErr)
 		}
 	}
 
-	return platform, nil
+	return win, nil
 }
 
 // UseImgui is an option to setup additional bits so the window can be used
@@ -171,7 +182,7 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 // and the `Filename` and `Size` fields to load fonts for use with imgui.
 // Pass nil to just use the default font. Imgui ini file disabled by default.
 func UseImgui(fonts FontMap) WindowOption {
-	return func(platform *Window) error {
+	return func(win *Window) error {
 		// imgui initialization things
 		imgctx := imgui.CreateContext(nil)
 		io := imgui.CurrentIO()
@@ -202,10 +213,39 @@ func UseImgui(fonts FontMap) WindowOption {
 			Fonts:    fonts,
 		}
 
-		platform.Gui = &gui
-		platform.setImguiKeyMapping()
-		platform.installImguiCallbacks()
+		win.Gui = &gui
+		win.setImguiKeyMapping()
+		win.installImguiCallbacks()
 
+		return nil
+	}
+}
+
+// SetIcons offers icon candidates to the window. PNG or JPEG in 16x16, 32x32, and 48x48 are good.
+func SetIcons(paths ...string) WindowOption {
+	return func(win *Window) error {
+		icons := make([]image.Image, 0, len(paths))
+		var iconOpenErr error
+		for _, p := range paths {
+			file, err := os.Open(p)
+			if err != nil {
+				iconOpenErr = err
+				continue
+			}
+			icon, _, err := image.Decode(file)
+			if err != nil {
+				iconOpenErr = err
+				continue
+			}
+			file.Close()
+			icons = append(icons, icon)
+		}
+
+		if iconOpenErr != nil && len(icons) == 0 {
+			return fmt.Errorf("failed to load any icons. example error: %w", iconOpenErr)
+		}
+
+		win.GlfwWindow.SetIcon(icons)
 		return nil
 	}
 }
