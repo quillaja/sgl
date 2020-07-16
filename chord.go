@@ -7,7 +7,8 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-// Chord is an input "gesture", which may be one or more keys (eg CTRL+ALT+T).
+// Chord is an input "gesture", which may be one or more keys (eg CTRL+ALT+T)
+// or mouse buttons (A + left-click).
 type Chord struct {
 	lastPressed time.Time
 	Keys        []glfw.Key // List of keys to be down to execute this chord
@@ -15,13 +16,15 @@ type Chord struct {
 	Execute     func()  // function to execute
 	Wait        float64 // Wait time (seconds) between sucessive allowable executions
 	Stop        bool    // When set, no further chords will be executed after this one has been
+
+	// TODO: consider using time.Duration for "Wait".
 }
 
 // Match determines whether or not the keys for this chord are pressed and if
 // the chord's Wait time has elapsed.
-func (c *Chord) Match(win *glfw.Window) bool {
+func (c *Chord) Match(win *glfw.Window, now time.Time) bool {
 	// check wait time
-	if time.Since(c.lastPressed).Seconds() < c.Wait {
+	if now.Sub(c.lastPressed).Seconds() < c.Wait {
 		return false
 	}
 
@@ -36,7 +39,7 @@ func (c *Chord) Match(win *glfw.Window) bool {
 		}
 	}
 
-	c.lastPressed = time.Now() // reset
+	c.lastPressed = now // reset
 	return true
 }
 
@@ -47,8 +50,9 @@ type ChordSet []Chord
 // key state.
 func (cs ChordSet) Match(win *glfw.Window) *Chord {
 	var i int
+	now := time.Now()
 	for i = 0; i < len(cs); i++ {
-		if cs[i].Match(win) {
+		if cs[i].Match(win, now) {
 			return &cs[i]
 		}
 	}
@@ -60,8 +64,9 @@ func (cs ChordSet) Match(win *glfw.Window) *Chord {
 // the first chord is encountered with its "Stop" member set to true.
 func (cs ChordSet) Execute(win *glfw.Window) {
 	var done bool
+	now := time.Now()
 	for i := 0; i < len(cs) && !done; i++ {
-		if cs[i].Match(win) {
+		if cs[i].Match(win, now) {
 			cs[i].Execute()
 			done = cs[i].Stop
 		}
@@ -110,8 +115,6 @@ func CombineSets(sets ...ChordSet) []ChordSet {
 
 // ExecuteSets calls Execute() on each ChordSet.
 func ExecuteSets(sets []ChordSet, win *glfw.Window) {
-	// using defer here so all the "searching" can be done first,
-	// then all the actual exections
 	for i := range sets {
 		sets[i].Execute(win)
 	}
