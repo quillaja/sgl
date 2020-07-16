@@ -25,9 +25,6 @@ func OpenImages(filenames ...string) ([]*image.RGBA, error) {
 		}
 
 		rgba := image.NewRGBA(img.Bounds())
-		if rgba.Stride != rgba.Rect.Size().X*4 { // NOTE: pointless check?
-			return nil, fmt.Errorf("unsupported stride")
-		}
 		draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
 
 		images = append(images, rgba)
@@ -83,4 +80,16 @@ func (tex *Texture2D) Reload(img *image.RGBA) {
 		tex.Height,
 		gl.RGBA, gl.UNSIGNED_BYTE,
 		gl.Ptr(img.Pix))
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+}
+
+// ReadImage gets a Go image from the texture.
+func (tex *Texture2D) ReadImage() *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, int(tex.Width), int(tex.Height)))
+	gl.BindTexture(gl.TEXTURE_2D, tex.ID)
+	gl.GetTexImage(gl.TEXTURE_2D, 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(img.Pix))
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+
+	flipVertically(img)
+	return img
 }
