@@ -73,6 +73,14 @@ type Shader struct {
 	Uniforms map[string]int32
 }
 
+// Attributes gets a slice of copies of the shader's attributes.
+func (s *Shader) Attributes() (copy []Attribute) {
+	for _, a := range s.Attribs {
+		copy = append(copy, *a)
+	}
+	return
+}
+
 func (s *Shader) SetInt(uniformName string, count int32, val *int32) {
 	gl.Uniform1iv(s.Uniforms[uniformName], count, val)
 }
