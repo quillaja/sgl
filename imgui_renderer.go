@@ -279,10 +279,13 @@ func (renderer *openGL3) createFontsTexture() {
 	// shader can display color images. It uses 4 bytes per pixel for the font
 	// atlas instead of 1 byte per pixel (ie 4x the memory). Maybe a big
 	// deal with lots of fonts or large character sets (CJK), but for now this is fine.
+	// NOTE: later, found "sizzle mask" option. Seems to work well. Allows RED
+	// format images to reduce storage size, but can make opengl use R channel
+	// as A channel during shader reads, and also set RGB channels to 1.
 
 	// Build texture atlas
 	io := imgui.CurrentIO()
-	image := io.Fonts().TextureDataRGBA32()
+	image := io.Fonts().TextureDataAlpha8()
 
 	// Upload texture to graphics system
 	var lastTexture int32
@@ -291,9 +294,11 @@ func (renderer *openGL3) createFontsTexture() {
 	gl.BindTexture(gl.TEXTURE_2D, renderer.fontTexture)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	swizzleMask := []int32{gl.ONE, gl.ONE, gl.ONE, gl.RED}
+	gl.TexParameteriv(gl.TEXTURE_2D, gl.TEXTURE_SWIZZLE_RGBA, &swizzleMask[0])
 	gl.PixelStorei(gl.UNPACK_ROW_LENGTH, 0)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, int32(image.Width), int32(image.Height),
-		0, gl.RGBA, gl.UNSIGNED_BYTE, image.Pixels)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RED, int32(image.Width), int32(image.Height),
+		0, gl.RED, gl.UNSIGNED_BYTE, image.Pixels)
 
 	// Store our identifier
 	io.Fonts().SetTextureID(imgui.TextureID(renderer.fontTexture))
