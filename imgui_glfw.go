@@ -33,6 +33,7 @@ func SetGLDefaults() {
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	// gl.Enable(gl.MULTISAMPLE)
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 }
 
@@ -131,6 +132,7 @@ func NewWindow(title string, size WindowMetric, options ...WindowOption) (*Windo
 	glfw.WindowHint(glfw.ContextVersionMinor, 3)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
+	// glfw.WindowHint(glfw.Samples, 4)
 	window, err := glfw.CreateWindow(size.W, size.H, title, nil, nil)
 	if err != nil {
 		glfw.Terminate()

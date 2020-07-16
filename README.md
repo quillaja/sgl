@@ -20,6 +20,7 @@ can use go port of imgui for gui.
     chords are executed or a chord with "Stop" set to true is executed.
     - icon loading window option.
     - convienience function to get font names from FontMap for use in Selecter.
+    - real fix for imgui renderer to display images in color (from v0.3.0)
 - 0.4.0
     - skybox
     - resizable window option at creation
