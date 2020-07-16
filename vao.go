@@ -117,8 +117,8 @@ func (v *Vao) DrawOptions(mode uint32, first, count int32) {
 	for i, tex := range v.Tex {
 		gl.ActiveTexture(gl.TEXTURE0 + uint32(i))
 		gl.BindTexture(gl.TEXTURE_2D, tex.ID)
-		// purposefully not unbinding textures at end
 	}
+	gl.ActiveTexture(gl.TEXTURE0) // reset to 0th texture
 
 	gl.BindVertexArray(v.VaoID)
 	if v.eboVertCount > 0 {
