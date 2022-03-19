@@ -11,11 +11,11 @@ import (
 // or mouse buttons (A + left-click).
 type Chord struct {
 	lastPressed time.Time
-	Keys        []glfw.Key // List of keys to be down to execute this chord
-	Mouse       []glfw.MouseButton
-	Execute     func()  // function to execute
-	Wait        float64 // Wait time (seconds) between sucessive allowable executions
-	Stop        bool    // When set, no further chords will be executed after this one has been
+	Keys        []glfw.Key         // List of keys to be down to execute this chord
+	Mouse       []glfw.MouseButton // List of mouse buttons to be down to execute this chord
+	Execute     func()             // The function to execute
+	Wait        float64            // Wait time (seconds) between sucessive allowable executions
+	Stop        bool               // When set, no further chords will be executed after this one has been
 
 	// TODO: consider using time.Duration for "Wait".
 }
@@ -88,6 +88,7 @@ func (cs ChordSet) Len() int {
 // Less reports whether the element with
 // index i should sort before the element with index j.
 func (cs ChordSet) Less(i int, j int) bool {
+	// TODO: include mouse buttons in sort
 	dLen := len(cs[i].Keys) - len(cs[j].Keys)
 	if dLen == 0 {
 		// if same length, order by integer value of keys

@@ -20,7 +20,30 @@ func Init() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize glfw: %w", err)
 	}
+
 	return nil
+}
+
+// work in progress. this is more of a note of useful queries.
+func queries() {
+	queries := map[string]uint32{
+		"max texture units":               gl.MAX_TEXTURE_IMAGE_UNITS,
+		"max combined texture units":      gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS,
+		"max cubemap size":                gl.MAX_CUBE_MAP_TEXTURE_SIZE,
+		"max texture size":                gl.MAX_TEXTURE_SIZE,
+		"max 3d texture size":             gl.MAX_3D_TEXTURE_SIZE,
+		"max vertex attribs":              gl.MAX_VERTEX_ATTRIBS,
+		"max uniform locations":           gl.MAX_UNIFORM_LOCATIONS,
+		"max vertex uniform components":   gl.MAX_VERTEX_UNIFORM_COMPONENTS,
+		"max vertex uniform vectors":      gl.MAX_VERTEX_UNIFORM_VECTORS,
+		"max uniform block size":          gl.MAX_UNIFORM_BLOCK_SIZE,
+		"max vertex uniform block size":   gl.MAX_VERTEX_UNIFORM_BLOCKS,
+		"max fragment uniform block size": gl.MAX_FRAGMENT_UNIFORM_BLOCKS,
+	}
+	var result int32
+	for _, target := range queries {
+		gl.GetIntegerv(target, &result)
+	}
 }
 
 // Destroy calls glfw.Terminate().
@@ -55,7 +78,7 @@ type Window struct {
 	// Updated each frame.
 	Clock Timer
 
-	mouseJustPressed [3]bool
+	mouseJustPressed [3]bool // for imgui
 
 	keyCallbacks    []glfw.KeyCallback
 	mouseCallbacks  []glfw.MouseButtonCallback
@@ -320,7 +343,7 @@ func (platform *Window) SwapBuffers() {
 
 // ClearBuffers clears color buffer and depth buffer.
 func (platform *Window) ClearBuffers() {
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
 }
 
 // CanUseGui tests if imgui is configured ("Gui" is non-nil).

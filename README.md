@@ -13,14 +13,23 @@ can use go port of imgui for gui.
 - [x] rename some types and functions.
 - [x] add utilites (from my gaia stars program)
 - [ ] make `Texture2D` more flexible
+- [ ] program->vao mapper? 
+    - to do foreach program { enable program; foreach vao { draw vao } }
+- [ ] change all "load" funcs that take a string path to also accept a `fs.FS` as the root
+    - this will allow me to use pkg `embed` or `os.DirFS`, etc
 
 ## Changelog
+- 0.6.0 todo
+    - mouse and camera structs (when finalized).
+    - keyboard/mouse somehow integrated into Window or other "input" manager?
+    - map of pressed keys/mouse buttons so don't pass *Window to ChordSet.
 - 0.5.0
     - ChordSet functionality changed so chords are executed until all matching
     chords are executed or a chord with "Stop" set to true is executed.
     - icon loading window option.
     - convienience function to get font names from FontMap for use in Selecter.
     - real fix for imgui renderer to display images in color (from v0.3.0)
+    - function to check opengl errors, and error type.
 - 0.4.0
     - skybox
     - resizable window option at creation

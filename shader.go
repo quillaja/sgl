@@ -10,8 +10,21 @@ import (
 
 // Size of common types in bytes.
 const (
-	SizeOfFloat = 4
-	SizeOfInt   = 4
+	SizeOfByte  = 1
+	SizeOfFloat = 4 * SizeOfByte
+	SizeOfInt   = 4 * SizeOfByte
+	SizeOfV3    = 3 * SizeOfFloat
+	SizeOfV4    = 4 * SizeOfFloat
+	SizeOfM4    = 4 * SizeOfV4
+)
+
+// Common vertex attribute types.
+const (
+	Float32 = gl.FLOAT
+	Int32   = gl.INT
+	Uint32  = gl.UNSIGNED_INT
+	Int8    = gl.BYTE
+	Uint8   = gl.UNSIGNED_BYTE
 )
 
 /*
