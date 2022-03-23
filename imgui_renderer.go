@@ -2,7 +2,7 @@ package sgl
 
 import (
 	"github.com/go-gl/gl/v3.3-core/gl"
-	"github.com/inkyblackness/imgui-go/v2"
+	"github.com/inkyblackness/imgui-go/v4"
 )
 
 // openGL3 implements a renderer based on github.com/go-gl/gl (v3.3-core).

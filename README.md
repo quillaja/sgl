@@ -23,6 +23,9 @@ can use go port of imgui for gui.
     - mouse and camera structs (when finalized).
     - keyboard/mouse somehow integrated into Window or other "input" manager?
     - map of pressed keys/mouse buttons so don't pass *Window to ChordSet.
+- 0.6.0
+    - update go version: 1.14 -> 1.18
+    - update dependency: imgui v2.3.0 -> v4.4.0 (imgui v1.85)
 - 0.5.0
     - ChordSet functionality changed so chords are executed until all matching
     chords are executed or a chord with "Stop" set to true is executed.
