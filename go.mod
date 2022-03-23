@@ -3,9 +3,9 @@ module github.com/quillaja/sgl
 go 1.18
 
 require (
-	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200420212212-258d9bec320e
-	github.com/go-gl/mathgl v0.0.0-20190713194549-592312d8590a
+	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6
+	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20220320163800-277f93cfa958
+	github.com/go-gl/mathgl v1.0.0
 	github.com/inkyblackness/imgui-go/v4 v4.4.0
-	golang.org/x/image v0.0.0-20200430140353-33d19683fad8
+	golang.org/x/image v0.0.0-20220321031419-a8550c1d254a
 )
