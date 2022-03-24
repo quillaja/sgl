@@ -99,14 +99,14 @@ type Shader struct {
 	ID       uint32
 	Type     uint32 // gl.VERTEX_SHADER, gl.FRAGMENT_SHADER, etc
 	Source   string
-	Attribs  map[string]*Attribute
+	Attribs  map[string]Attribute
 	Uniforms map[string]int32
 }
 
 // Attributes gets a slice of copies of the shader's attributes.
 func (s *Shader) Attributes() (copy []Attribute) {
 	for _, a := range s.Attribs {
-		copy = append(copy, *a)
+		copy = append(copy, a)
 	}
 	return
 }
@@ -183,9 +183,9 @@ func (prog *Program) Delete() {
 
 // AddShader creates and associates a shader with this program.
 func (prog *Program) AddShader(shaderType uint32, source string, uniformNames []string, attribs ...Attribute) {
-	a := make(map[string]*Attribute, len(attribs))
+	a := make(map[string]Attribute, len(attribs))
 	for i := range attribs {
-		a[attribs[i].Name] = &attribs[i]
+		a[attribs[i].Name] = attribs[i]
 	}
 
 	u := make(map[string]int32, len(uniformNames))
@@ -227,10 +227,10 @@ func (prog *Program) Link() error {
 
 	prog.Use()
 	for _, shader := range prog.Shaders {
-		for _, desc := range shader.Attribs {
-			name := desc.Name
+		for name, attrib := range shader.Attribs {
 			id := uint32(gl.GetAttribLocation(prog.ID, gl.Str(name+"\x00")))
-			shader.Attribs[name].ID = id
+			attrib.ID = id
+			shader.Attribs[name] = attrib // set modied value
 		}
 		for name := range shader.Uniforms {
 			id := gl.GetUniformLocation(prog.ID, gl.Str(name+"\x00"))
