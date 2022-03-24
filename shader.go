@@ -27,6 +27,23 @@ const (
 	Uint8   = gl.UNSIGNED_BYTE
 )
 
+func BytesIn(t uint32) int {
+	switch t {
+	case Float32:
+		return SizeOfFloat
+	case Int32:
+		return SizeOfInt
+	case Uint32:
+		return SizeOfInt
+	case Int8:
+		return SizeOfByte
+	case Uint8:
+		return SizeOfByte
+	default:
+		return 0
+	}
+}
+
 /*
 uniform       valid
 type          functions
@@ -56,7 +73,7 @@ type Attribute struct {
 	ID     uint32 // index or location of attribute
 	Name   string // name of attribute in the shader GLSL
 	Size   int32  // 'numbers' in a single attribute
-	Type   uint32 // gl.FLOAT, etc
+	Type   uint32 // sgl.Float32 (gl.FLOAT), etc
 	Stride int32  // bytes
 	Offset int    // bytes
 	// Normalized bool // if added, goes after Type
@@ -64,8 +81,8 @@ type Attribute struct {
 
 // Enable (associate) attribute with "current" VAO/VBO.
 func (a *Attribute) Enable() {
-	gl.VertexAttribPointer(a.ID, a.Size, a.Type, false, a.Stride, gl.PtrOffset(a.Offset))
 	gl.EnableVertexAttribArray(a.ID)
+	gl.VertexAttribPointer(a.ID, a.Size, a.Type, false, a.Stride, gl.PtrOffset(a.Offset))
 }
 
 // func (a *Attribute) String() string { return fmt.Sprintf("%+v", *a) }
@@ -132,19 +149,19 @@ func NewProgram() *Program {
 }
 
 func (prog *Program) Vertex() *Shader {
-	return prog.Shaders[gl.VERTEX_SHADER]
+	return prog.Shaders[VertexShader]
 }
 
 func (prog *Program) Geometry() *Shader {
-	return prog.Shaders[gl.GEOMETRY_SHADER]
+	return prog.Shaders[GeometryShader]
 }
 
 func (prog *Program) Fragment() *Shader {
-	return prog.Shaders[gl.FRAGMENT_SHADER]
+	return prog.Shaders[FragmentShader]
 }
 
 func (prog *Program) Compute() *Shader {
-	return prog.Shaders[gl.COMPUTE_SHADER]
+	return prog.Shaders[ComputeShader]
 }
 
 // func (prog *Program) String() string {
