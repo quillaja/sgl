@@ -46,8 +46,10 @@ func NewSkybox(faces []*image.RGBA) (*Skybox, error) {
 		}
 	}
 
-	vao := NewVao(Triangles, skyboxProgram)
-	vao.SetVbo(skyboxVertices)
+	// vao := NewVao(Triangles, skyboxProgram, nil)
+	// vao.SetVbo(skyboxVertices)
+	vao := NewVao(Triangles, NewVbo("vbo", skyboxProgram.Vertex().Attributes()...)) // all attribs in one vbo
+	vao.Vbo["vbo"].Initalize(skyboxVertices)
 
 	sky := &Skybox{
 		TextureID: loadCubemap(faces),
@@ -71,7 +73,7 @@ func (sky *Skybox) Draw(view, projection mgl32.Mat4) {
 	skyboxProgram.Vertex().SetMat4("projection", 1, &projection)
 	// skybox cube
 	gl.DepthFunc(gl.LEQUAL) // change depth function so depth test passes when values are equal to depth buffer's content
-	gl.BindVertexArray(sky.Vao.VaoID)
+	gl.BindVertexArray(sky.Vao.ID)
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, sky.TextureID)
 	gl.DrawArrays(gl.TRIANGLES, 0, 36) // actually draws skybox
